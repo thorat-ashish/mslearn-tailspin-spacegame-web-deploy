@@ -1,3 +1,10 @@
+#https://docs.microsoft.com/en-us/learn/modules/create-release-pipeline/5-deploy-to-appservice
+#To convert your existing build configuration to a multistage pipeline, you add a stages section to your configuration. You then add one or more stage sections to define each phase of your pipeline. Stages break down into jobs, which are a series of steps that run sequentially as a unit.
+#Notice the use of the download and AzureWebApp@1 tasks. $(WebAppName) reads the web app name from your pipeline variable.
+#Also notice the environment field. This specifies that the deployment is associated with the dev environment.
+
+
+
 trigger:
 - '*'
 
@@ -64,3 +71,26 @@ stages:
 
     - publish: '$(Build.ArtifactStagingDirectory)'
       artifact: drop
+
+- stage: 'Deploy'
+  displayName: 'Deploy the web application'
+  dependsOn: Build
+  jobs:
+  - deployment: Deploy
+    pool:
+      vmImage: 'ubuntu-20.04'
+    environment: dev
+    variables:
+    - group: Release
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: drop
+          - task: AzureWebApp@1
+            displayName: 'Azure App Service Deploy: website'
+            inputs:
+              azureSubscription: 'Resource Manager - Tailspin - Space Game'
+              appName: '$(WebAppName)'
+              package: '$(Pipeline.Workspace)/drop/$(buildConfiguration)/*.zip'
